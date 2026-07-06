@@ -18,15 +18,17 @@ if st.button("🚀 Enviar Registro"):
     msg = EmailMessage()
     msg['Subject'] = f"[REGISTRO-PIE] | {curso} | {estudiante}"
     msg.set_content(f"Curso: {curso}\nEstudiante: {estudiante}\nLugar: {lugar}\nActividad: {actividad}")
-    msg['From'] = "TU_CORREO_PERSONAL@gmail.com" # Tu cuenta de origen
-    msg['To'] = "TU_MAIL_INSTITUCIONAL@ebss.cl"  # Tu cuenta de destino
+    
+    # --- TUS DATOS CONFIGURADOS ---
+    msg['From'] = "bablopravo@gmail.com" 
+    msg['To'] = "pablo.rojas@ebss.cl"
     
     try:
         # Conexión al servidor de Gmail
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            # IMPORTANTE: Aquí va tu contraseña de aplicación (NO tu clave normal)
-            smtp.login("TU_CORREO_PERSONAL@gmail.com", "TU_CONTRASEÑA_DE_APLICACION")
+            # Reemplaza 'TU_CODIGO_DE_16_LETRAS' por tu contraseña de aplicación real
+            smtp.login("bablopravo@gmail.com", "ecrilpyxayeoosny")
             smtp.send_message(msg)
         st.success("¡Registro enviado al correo institucional!")
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error al enviar: {e}")
