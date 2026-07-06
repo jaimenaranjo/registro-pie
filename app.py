@@ -1,49 +1,58 @@
 import streamlit as st
+import datetime
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
-import datetime
-from config import LIBROS_REGISTRO, LISTA_CURSOS
+from config import LIBROS_REGISTRO
 
-# Configuración de API
+# 1. SETUP: Conexión a Google Docs
 SCOPES = ['https://www.googleapis.com/auth/documents']
 creds = Credentials.from_service_account_file('credentials.json', scopes=SCOPES)
 service = build('docs', 'v1', credentials=creds)
 
-def registrar(curso, estudiante, actividad):
+# 2. DATA: El Horario que extrajimos de tus fotos (El mapa de tu día)
+HORARIO = {
+    "Lunes": {
+        "08:00": {"curso": "7B", "estudiante": "Edgar SANCHEZ"},
+        "08:45": {"curso": "7B", "estudiante": "Esteban JIMENEZ / Hannibal DROGUETT"},
+        "09:45": {"curso": "PKB", "estudiante": "Matías Edme"},
+    },
+    # ... aquí completarías los demás días según tu horario ...
+}
+
+# 3. LÓGICA: Escritura automática en Google Doc
+def escribir_en_doc(curso, estudiante, actividad):
     doc_id = LIBROS_REGISTRO.get(curso)
     fecha = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
+    texto = f"\n[REGISTRO PIE - {fecha}]\nEstudiante: {estudiante}\nActividad: {actividad}\n"
     
-    # Formato profesional para el Libro de Registro
-    texto = f"\n--- REGISTRO PIE: {fecha} ---\nEstudiante: {estudiante}\nActividad: {actividad}\n"
+    body = {'requests': [{'insertText': {'text': texto, 'endOfSegmentLocation': {'segmentId': ''}}}]}
+    service.documents().batchUpdate(documentId=doc_id, body=body).execute()
+
+# 4. INTERFAZ: El Calendario Interactivo
+st.title("📅 Calendario Inteligente PIE")
+
+dia = st.selectbox("Día", ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"])
+hora = st.selectbox("Hora", ["08:00", "08:45", "09:45", "10:30", "12:15"])
+
+# Lógica del Calendario: Busca automáticamente en el horario
+if dia in HORARIO and hora in HORARIO[dia]:
+    datos = HORARIO[dia][hora]
+    st.info(f"Curso: {datos['curso']} | Estudiante: {datos['estudiante']}")
     
-    requests = [{'insertText': {'text': texto, 'endOfSegmentLocation': {'segmentId': ''}}}]
-    service.documents().batchUpdate(documentId=doc_id, body={'requests': requests}).execute()
-
-# --- INTERFAZ INTELIGENTE ---
-st.title("🗂️ Registro PIE Móvil")
-
-# Selector de curso
-curso = st.selectbox("Selecciona el Curso", LISTA_CURSOS)
-
-# Campo de Estudiante (puedes escribir o seleccionar de tu lista real)
-estudiante = st.text_input("Nombre del Estudiante")
-
-# Cuadrícula de acciones rápidas (Esto es lo que pediste)
-st.write("Acciones:")
-col1, col2 = st.columns(2)
-with col1:
-    asistencia = st.checkbox("Asistencia")
-with col2:
-    evaluacion = st.checkbox("Evaluación")
-
-# Descripción dinámica
-desc_base = "Asistencia confirmada. " if asistencia else ""
-desc_base += "Se realizó evaluación formal. " if evaluacion else ""
-actividad = st.text_area("Descripción detallada", value=desc_base)
-
-if st.button("✅ Guardar Registro"):
-    if estudiante and actividad:
-        registrar(curso, estudiante, actividad)
-        st.success(f"Guardado en {curso}")
-    else:
-        st.error("Por favor completa estudiante y actividad.")
+    # Cuadrícula de Acciones (Disparador de Descripción)
+    col1, col2 = st.columns(2)
+    asist = col1.checkbox("Asistencia")
+    eval = col2.checkbox("Evaluación")
+    
+    # Descripción automática
+    desc_auto = f"Atención {datos['curso']}. "
+    if asist: desc_auto += "Asistencia presente. "
+    if eval: desc_auto += "Realizó evaluación. "
+    
+    actividad = st.text_area("Descripción final", value=desc_auto)
+    
+    if st.button("Guardar en Libro de Registro"):
+        escribir_en_doc(datos['curso'], datos['estudiante'], actividad)
+        st.success("¡Registro enviado con éxito!")
+else:
+    st.warning("No hay registros programados en este horario.")
